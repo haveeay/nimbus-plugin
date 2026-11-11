@@ -1,0 +1,55 @@
+name: Build macOS plugin
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (universal: Apple Silicon + Intel)
+        run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build VST3, AU and Standalone
+        run: cmake --build build --config Release --target Nimbus_VST3 Nimbus_AU Nimbus_Standalone -- -quiet
+
+      - name: Ad-hoc code sign
+        run: |
+          cd build/Nimbus_artefacts/Release
+          codesign --force --deep --sign - VST3/Nimbus.vst3
+          codesign --force --deep --sign - AU/Nimbus.component
+          codesign --force --deep --sign - Standalone/Nimbus.app
+
+      - name: Validate the Audio Unit with auval
+        continue-on-error: true
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/Nimbus_artefacts/Release/AU/Nimbus.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          sleep 3
+          auval -v aumu Nmbs Javi
+
+      - name: Package
+        run: |
+          mkdir -p dist/Nimbus
+          cp -R build/Nimbus_artefacts/Release/VST3/Nimbus.vst3 dist/Nimbus/
+          cp -R build/Nimbus_artefacts/Release/AU/Nimbus.component dist/Nimbus/
+          cp -R build/Nimbus_artefacts/Release/Standalone/Nimbus.app dist/Nimbus/
+          cp INSTALL.txt dist/Nimbus/
+          cd dist && ditto -c -k --keepParent Nimbus Nimbus-macOS.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nimbus-macOS
+          path: dist/Nimbus-macOS.zip
+
+      - name: Attach to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Nimbus-macOS.zip

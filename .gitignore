@@ -1,0 +1,7 @@
+build/
+dist/
+tests/core_test
+tests/demo
+tests/demo.raw
+ui.png
+.DS_Store

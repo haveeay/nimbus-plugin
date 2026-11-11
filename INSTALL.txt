@@ -1,0 +1,17 @@
+NIMBUS - install on macOS
+=========================
+
+1. Copy the plugins into your plug-in folders (Finder > Go > Go to Folder...):
+     Nimbus.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+     Nimbus.component  ->  ~/Library/Audio/Plug-Ins/Components/
+   (Nimbus.app is a standalone version you can play without a DAW.)
+
+2. These builds aren't notarized by Apple, so macOS blocks them at first.
+   Open Terminal and paste:
+
+     xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Nimbus.vst3 ~/Library/Audio/Plug-Ins/Components/Nimbus.component
+
+3. In Ableton Live: Settings > Plug-Ins
+     - turn on "Use Audio Units v2" and/or "Use VST3 Plug-In System Folders"
+     - click Rescan
+   Nimbus appears under Plug-Ins > Javi > Nimbus. Drag it onto a MIDI track.
