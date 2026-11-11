@@ -136,6 +136,10 @@ struct SynthParams {
   float attack = 0.6f, decay = 1.2f, sustain = 0.85f, release = 1.6f;  // seconds / level
   float volumeDb = -6.f;
   float bendRange = 2.f;
+  float lfoRate = 4.f;     // Hz
+  float lfoDelay = 0.f;    // seconds before the LFO fades in on each note
+  float lfoPitch = 0.f;    // 0..1 (up to +/- 1 semitone vibrato)
+  float lfoVcf = 0.f;      // 0..1 (up to +/- 2 octaves)
 };
 
 class Synth {
@@ -179,6 +183,7 @@ class Synth {
     Voice & vo = voices[v];
     if (!vo.env.active()) vo.vcf.reset();
     vo.note = note; vo.gate = true; vo.held = false; vo.age = ++counter;
+    vo.lfoFade = 0.f;
     vo.env.gateOn();
     engine.noteOn(v);
   }
@@ -214,6 +219,7 @@ class Synth {
     int note = 60;
     bool gate = false, held = false;
     uint32_t age = 0;
+    float lfoFade = 0.f;
     Envelope env;
     Ladder vcf;
   };
@@ -225,17 +231,26 @@ class Synth {
     std::memset(R, 0, n * sizeof(float));
 
     const float spread = engineParams[kSpread] * 0.01f;
+    // global triangle LFO (one per synth, like the original), per-voice delayed fade-in
+    lfoPhase += params.lfoRate * (float)n / fs;
+    if (lfoPhase >= 1.f) lfoPhase -= std::floor(lfoPhase);
+    const float lfo = tri(lfoPhase);
+    const float fadeInc = params.lfoDelay > 0.001f ? (float)n / (params.lfoDelay * fs) : 1.f;
     engine.beginBlock(n);
     for (int v = 0; v < kVoices; v++) {
       Voice & vo = voices[v];
       if (!vo.env.active()) continue;
 
-      float tmp[64];
-      engine.renderVoice(v, (float)vo.note + bend, tmp, 1, n);
+      vo.lfoFade = std::fmin(1.f, vo.lfoFade + fadeInc);
+      const float vlfo = lfo * vo.lfoFade;
 
-      // cutoff: base * env * keyboard tracking, updated once per chunk
+      float tmp[64];
+      engine.renderVoice(v, (float)vo.note + bend + vlfo * params.lfoPitch, tmp, 1, n);
+
+      // cutoff: base * env * keyboard tracking * LFO, updated once per chunk
       const float envNow = vo.env.value;
-      const float oct = params.envAmt * envNow * 7.f + params.kybd * ((float)vo.note - 60.f) / 12.f;
+      const float oct = params.envAmt * envNow * 7.f + params.kybd * ((float)vo.note - 60.f) / 12.f +
+                        vlfo * params.lfoVcf * 2.f;
       vo.vcf.set(params.cutoff * std::exp2(oct), fs, params.reso);
 
       // voice pan: alternate sides, wider for higher voice numbers
@@ -288,6 +303,7 @@ class Synth {
   float bend = 0.f;
   float hissHpL = 0, hissHpR = 0, hissLpL = 0, hissLpR = 0, hissHpCoef = 0, hissLpCoef = 0;
   float humPhase = 0.f;
+  float lfoPhase = 0.f;
 };
 
 }  // namespace nimbus

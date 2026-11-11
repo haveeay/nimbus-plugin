@@ -5,3 +5,6 @@ tests/demo
 tests/demo.raw
 ui.png
 .DS_Store
+tests/*.raw
+tests/fx_test
+tests/fx_demo

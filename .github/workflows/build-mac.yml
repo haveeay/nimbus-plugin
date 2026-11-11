@@ -1,16 +1,21 @@
-name: Build macOS plugin
+name: Build macOS plugin + installer
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   mac:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Read version
+        run: echo "VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
 
       - name: "Configure (universal: Apple Silicon + Intel)"
         run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
@@ -34,22 +39,23 @@ jobs:
           sleep 3
           auval -v aumu Nmbs Javi
 
-      - name: Package
-        run: |
-          mkdir -p dist/Nimbus
-          cp -R build/Nimbus_artefacts/Release/VST3/Nimbus.vst3 dist/Nimbus/
-          cp -R build/Nimbus_artefacts/Release/AU/Nimbus.component dist/Nimbus/
-          cp -R build/Nimbus_artefacts/Release/Standalone/Nimbus.app dist/Nimbus/
-          cp INSTALL.txt dist/Nimbus/
-          cd dist && ditto -c -k --keepParent Nimbus Nimbus-macOS.zip
+      - name: Build installer (.pkg inside .dmg)
+        run: installer/make_installer.sh "$VERSION"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Nimbus-macOS
-          path: dist/Nimbus-macOS.zip
+          name: Nimbus-${{ env.VERSION }}-macOS
+          path: dist/Nimbus-${{ env.VERSION }}-macOS.dmg
 
-      - name: Attach to release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish GitHub release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Nimbus-macOS.zip
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Nimbus ${{ env.VERSION }}
+          make_latest: true
+          files: dist/Nimbus-${{ env.VERSION }}-macOS.dmg
+          body: |
+            Download **Nimbus-${{ env.VERSION }}-macOS.dmg**, open it and run **Install Nimbus.pkg**.
+            The Owner's Manual is inside the disk image. See *Read Me First.txt* for the one-time macOS security step.

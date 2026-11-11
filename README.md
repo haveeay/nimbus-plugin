@@ -2,8 +2,13 @@
 
 A vintage DCO polysynth for pads, inspired by the classic early-80s single-oscillator
 polysynths: saw + PWM pulse + sub + noise, the 4-position high-pass, a 4-pole ladder
-filter, and a two-line bucket-brigade stereo chorus with its hiss. Plus drift and an
+filter, an LFO, and a two-line bucket-brigade stereo chorus with its hiss. Plus drift and an
 **AGE** control for saturation, mains hum and a duller top end.
+
+An effects rack follows the synth: **DRIVE** (gentle tube saturation), **TAPE ECHO**
+(three-head tape delay with wow, flutter and tempo sync) and **CLOUD** (a granular
+micro-looper with MOSAIC, HAZE, GLIDE and REVERSE modes, freeze and a built-in space).
+Save and recall your own presets from the preset bar.
 
 It ships in two forms that share one DSP core (`Source/nimbus_dsp.h`):
 
@@ -14,12 +19,12 @@ It ships in two forms that share one DSP core (`Source/nimbus_dsp.h`):
 
 ![screenshot](docs/screenshot.png)
 
-## Getting the Mac plugin
-Every push to `main` builds a universal (Apple Silicon + Intel) Mac version on GitHub
-Actions. Open the **Actions** tab, click the latest run and download **Nimbus-macOS**
-under *Artifacts*. Then follow `INSTALL.txt`.
+## Download
+Get **Nimbus-<version>-macOS.dmg** from the [latest release](https://github.com/haveeay/nimbus-plugin/releases/latest).
+It contains **Install Nimbus.pkg** and the Owner's Manual (PDF, also in `docs/`).
 
-Push a tag like `v1.0.0` to attach the zip to a GitHub Release.
+Every push to `main` builds a universal (Apple Silicon + Intel) installer on GitHub Actions
+and publishes it as the release for the version in `VERSION`.
 
 ## Building locally
 ```

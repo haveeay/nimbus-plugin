@@ -1,0 +1,16 @@
+#!/bin/bash
+# Remove copies installed by hand into the user's own plug-in folders, so the
+# host doesn't see two Nimbus plug-ins, then refresh the Audio Unit cache.
+CONSOLE_USER=$(/usr/bin/stat -f%Su /dev/console 2>/dev/null)
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  USER_HOME=$(/usr/bin/dscl . -read "/Users/$CONSOLE_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+  if [ -n "$USER_HOME" ]; then
+    rm -rf "$USER_HOME/Library/Audio/Plug-Ins/VST3/Nimbus.vst3"
+    rm -rf "$USER_HOME/Library/Audio/Plug-Ins/Components/Nimbus.component"
+    # make sure the user presets folder exists and belongs to the user
+    mkdir -p "$USER_HOME/Library/Audio/Presets/Javi/Nimbus"
+    chown -R "$CONSOLE_USER" "$USER_HOME/Library/Audio/Presets/Javi" 2>/dev/null
+  fi
+fi
+killall -9 AudioComponentRegistrar 2>/dev/null
+exit 0
